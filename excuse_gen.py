@@ -24,3 +24,11 @@ TEMPLATES: dict[str, list[str]] = {
         "{topic}にまつわる不可解なトラブルが連鎖し、復旧に時間を奪われました。",
     ],
 }
+def generate_excuse(topic: str, level: str, rng: random.Random) -> str:
+    """Generate a single excuse string for a given topic and severity level."""
+    cleaned = topic.strip()
+    if not cleaned:
+        raise ValueError("Input line must not be empty or whitespace-only.")
+    candidates = TEMPLATES[level]
+    template = rng.choice(candidates)
+    return template.format(topic=cleaned)
