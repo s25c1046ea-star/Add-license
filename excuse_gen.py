@@ -32,3 +32,72 @@ def generate_excuse(topic: str, level: str, rng: random.Random) -> str:
     candidates = TEMPLATES[level]
     template = rng.choice(candidates)
     return template.format(topic=cleaned)
+def build_parser() -> argparse.ArgumentParser:
+    """Create the CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        prog="excuse-gen",
+        description="Read situation memos from stdin and output formatted excuses to stdout.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducible output (recommended for testing).",
+    )
+    parser.add_argument(
+        "--level",
+        choices=("mild", "dramatic"),
+        default="mild",
+        help="Excuse tone level: 'mild' or 'dramatic' (default: mild).",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("text", "tsv", "json"),
+        default="text",
+        dest="output_format",
+        help="Output format: 'text', 'tsv', or 'json' (default: text).",
+    )
+    parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="Skip empty lines instead of treating them as errors.",
+    )
+    return parser
+
+
+def process_stream(
+    lines: Sequence[str] | object,
+    seed: int | None = None,
+    level: str = "mild",
+    output_format: str = "text",
+    allow_empty: bool = False,
+) -> list[str]:
+    """Process an iterable of input lines and return formatted stdout lines."""
+    rng = random.Random(seed)
+    rendered: list[str] = []
+
+    for line_no, raw_line in enumerate(lines, start=1):
+        text = str(raw_line).rstrip("\r\n")
+        if not text.strip():
+            if allow_empty:
+                continue
+            raise ValueError(f"Line {line_no} is empty.")
+
+        excuse = generate_excuse(text, level=level, rng=rng)
+        if output_format == "text":
+            rendered.append(excuse)
+        elif output_format == "tsv":
+            safe_topic = text.replace("\t", " ")
+            safe_excuse = excuse.replace("\t", " ")
+            rendered.append(f"{safe_topic}\t{safe_excuse}")
+        elif output_format == "json":
+            payload = {
+                "input": text,
+                "level": level,
+                "excuse": excuse,
+            }
+            rendered.append(json.dumps(payload, ensure_ascii=False))
+        else:
+            raise ValueError(f"Unsupported output format: {output_format}")
+
+    return rendered
