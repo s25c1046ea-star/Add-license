@@ -101,3 +101,27 @@ def process_stream(
             raise ValueError(f"Unsupported output format: {output_format}")
 
     return rendered
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entry point."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        output_lines = process_stream(
+            sys.stdin,
+            seed=args.seed,
+            level=args.level,
+            output_format=args.output_format,
+            allow_empty=args.allow_empty,
+        )
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    for item in output_lines:
+        print(item, file=sys.stdout)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
